@@ -16,10 +16,10 @@ void loop() {
   if (!pressed and !digitalRead(PEDAL_PIN)) {
     digitalWrite(LED_PIN, HIGH);
     pressed = true;
-    Serial.write("+");
+    Serial.write("+\n");
   } else if (pressed and digitalRead(PEDAL_PIN)) {
     digitalWrite(LED_PIN, LOW);
     pressed = false;
-    Serial.write("-");
+    Serial.write("-\n");
   }
 }
