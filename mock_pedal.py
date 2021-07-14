@@ -59,6 +59,7 @@ def writer_thread(writer_queue: queue.Queue):
             for _ in range(num_chars):
                 controller.press(keyboard.Key.backspace)
                 controller.release(keyboard.Key.backspace)
+                time.sleep(0.005)
 
             for e, k in msg.data:
                 shift_pressed = False
@@ -72,6 +73,8 @@ def writer_thread(writer_queue: queue.Queue):
 
                 if shift_pressed:
                     controller.release(keyboard.Key.shift)
+
+                time.sleep(0.005)
 
         elif msg.msg_type == WriterMessageType.STOP:
             break
