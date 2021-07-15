@@ -19,6 +19,7 @@ class Message:
 
 
 class WriterMessageType(Enum):
+    EMERGENCY_STOP = -1
     STOP = 0
     WRITE_KEYS = 1
 
@@ -34,6 +35,7 @@ class WriterMessageData:
 
 
 class ListenerMessageType(Enum):
+    EMERGENCY_STOP = -1
     STOP = 0
     DISABLE = 1
     ENABLE = 2
@@ -78,6 +80,8 @@ def writer_thread(writer_queue: queue.Queue):
                 time.sleep(0.005)
         elif msg.msg_type == WriterMessageType.STOP:
             break
+        elif msg.msg_type == WriterMessageType.EMERGENCY_STOP:
+            break
         else:
             raise ValueError(f'Invalid message {msg}')
         time.sleep(0.01)
@@ -113,6 +117,9 @@ def listener_thread(listener_queue: queue.Queue, writer_queue: queue.Queue):
                 key_buffer.clear()
         elif msg.msg_type == ListenerMessageType.STOP:
             break
+        elif msg.msg_type == ListenerMessageType.EMERGENCY_STOP:
+            writer_queue.put(Message(WriterMessageType.EMERGENCY_STOP))
+            break
         else:
             raise ValueError(f'Invalid message {msg}')
         time.sleep(0.01)
@@ -121,7 +128,13 @@ def listener_thread(listener_queue: queue.Queue, writer_queue: queue.Queue):
 
 def pedal_thread(arduino: serial.Serial, pedal_queue: queue.Queue, listener_queue: queue.Queue):
     while True:
-        data = arduino.readline()
+        try:
+            data = arduino.readline()
+        except serial.SerialException:
+            listener_queue.put(Message(ListenerMessageType.EMERGENCY_STOP))
+            print('Pedal was disconnected.\nExiting.')
+            break
+
         if data == b'+\n':
             listener_queue.put(Message(ListenerMessageType.ENABLE))
         elif data == b'-\n':
