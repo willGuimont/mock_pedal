@@ -1,3 +1,4 @@
+import argparse
 import queue
 import random
 import threading
@@ -75,7 +76,6 @@ def writer_thread(writer_queue: queue.Queue):
                     controller.release(keyboard.Key.shift)
 
                 time.sleep(0.005)
-
         elif msg.msg_type == WriterMessageType.STOP:
             break
         else:
@@ -119,9 +119,7 @@ def listener_thread(listener_queue: queue.Queue, writer_queue: queue.Queue):
     listener.stop()
 
 
-def pedal_thread(pedal_queue: queue.Queue, listener_queue: queue.Queue):
-    # TODO error handling
-    arduino = serial.Serial(port='/dev/ttyACM0', baudrate=9600, timeout=0.1)
+def pedal_thread(arduino: serial.Serial, pedal_queue: queue.Queue, listener_queue: queue.Queue):
     while True:
         data = arduino.readline()
         if data == b'+\n':
@@ -138,14 +136,20 @@ def pedal_thread(pedal_queue: queue.Queue, listener_queue: queue.Queue):
         time.sleep(0.01)
 
 
-def main():
+def main(port):
+    try:
+        arduino = serial.Serial(port=port, baudrate=9600, timeout=0.1)
+    except serial.SerialException:
+        print(f'Could not open port {port}.\nExiting.')
+        return 1
+
     pedal_queue = queue.Queue()
     listener_queue = queue.Queue()
     writer_queue = queue.Queue()
 
     wthread = threading.Thread(target=writer_thread, args=(writer_queue,))
     lthread = threading.Thread(target=listener_thread, args=(listener_queue, writer_queue))
-    pthread = threading.Thread(target=pedal_thread, args=(pedal_queue, listener_queue))
+    pthread = threading.Thread(target=pedal_thread, args=(arduino, pedal_queue, listener_queue))
 
     wthread.start()
     lthread.start()
@@ -164,6 +168,16 @@ def main():
     lthread.join()
     pthread.join()
 
+    return 0
+
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='you caN\'T coNVeY sArCASM tROugH WRitTeN tExT')
+    parser.add_argument('--port', '-p', help='Port of the pedal', default='/dev/ttyACM0')
+    args = parser.parse_args()
+
+    port = args.port
+
+    ret = main(port=port)
+
+    exit(ret)
