@@ -120,6 +120,7 @@ def listener_thread(listener_queue: queue.Queue, writer_queue: queue.Queue):
 
 
 def pedal_thread(pedal_queue: queue.Queue, listener_queue: queue.Queue):
+    # TODO error handling
     arduino = serial.Serial(port='/dev/ttyACM0', baudrate=9600, timeout=0.1)
     while True:
         data = arduino.readline()
